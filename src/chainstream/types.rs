@@ -45,8 +45,8 @@ pub mod transaction {
             self.value.meta.as_ref().unwrap().log_messages.as_slice()
         }
 
-        pub fn meta(&self) -> &Meta {
-            self.value.meta.as_ref().unwrap()
+        pub fn meta(&self) -> Meta {
+            self.value.meta.as_ref().unwrap().clone()
         }
     }
 

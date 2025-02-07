@@ -17,11 +17,10 @@ use super::anchor_events::*;
 const PROGRAM_LOG: &str = "Program log: ";
 const PROGRAM_DATA: &str = "Program data: ";
 
+const RAYDIUM_CLMM_PROGRAM: &'static str = "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK";
+
 /// Top-level event parser. Returns a list of parsed events (if any).
-pub fn parse_raydium_anchor_events(
-    self_program_str: &str,
-    meta: Meta,
-) -> Result<Vec<RaydiumCLMMEvent>> {
+pub fn parse_raydium_anchor_events(meta: Meta) -> Result<Vec<RaydiumCLMMEvent>> {
     let mut parsed_events = Vec::new();
     let mut logs = &meta.log_messages[..];
 
@@ -33,12 +32,12 @@ pub fn parse_raydium_anchor_events(
     if let Ok(mut execution) = Execution::new(&mut logs) {
         for l in logs {
             let (new_program, did_pop, maybe_event) =
-                if !execution.is_empty() && self_program_str == execution.program() {
+                if !execution.is_empty() && RAYDIUM_CLMM_PROGRAM == execution.program() {
                     // Current program log
-                    handle_program_log(self_program_str, l, true)?
+                    handle_program_log(RAYDIUM_CLMM_PROGRAM, l, true)?
                 } else {
                     // Possibly a system/cpi log
-                    let (program, did_pop) = handle_system_log(self_program_str, l);
+                    let (program, did_pop) = handle_system_log(RAYDIUM_CLMM_PROGRAM, l);
                     (program, did_pop, None)
                 };
 

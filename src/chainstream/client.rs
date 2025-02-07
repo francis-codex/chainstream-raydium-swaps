@@ -7,11 +7,12 @@ use jsonrpsee::{
     http_client::HeaderMap,
     ws_client::{PingConfig, WsClient, WsClientBuilder},
 };
-use serde::de::DeserializeOwned;
 
-use super::methods::Method;
+use super::methods::SubscriptionMethod;
 
 pub type ChainStreamSubscription<T> = Subscription<T>;
+
+const CHAINSTREAM_API_URL: &'static str = "wss://chainstream.api.syndica.io";
 
 pub struct ClientBuilder {
     token: String,
@@ -21,12 +22,11 @@ pub struct ClientBuilder {
 pub type ClientError = jsonrpsee::core::ClientError;
 
 impl ClientBuilder {
-    pub fn new(token: &str) -> Self {
-        let builder = Self {
-            token: token.to_string(),
+    pub fn new() -> Self {
+        Self {
             ws_client_builder: WsClientBuilder::default(),
-        };
-        builder.token(token)
+            token: Default::default(),
+        }
     }
 
     /// Set the Syndica API token for the client.
@@ -124,9 +124,9 @@ impl ClientBuilder {
         }
     }
 
-    pub async fn build(self, url: &str) -> Result<ChainStreamClient, ClientError> {
+    pub async fn build(self) -> Result<ChainStreamClient, ClientError> {
         Ok(ChainStreamClient {
-            inner: Arc::new(self.ws_client_builder.build(url).await?),
+            inner: Arc::new(self.ws_client_builder.build(CHAINSTREAM_API_URL).await?),
             token: self.token,
         })
     }
@@ -145,19 +145,24 @@ impl ChainStreamClient {
     ///
     /// The `url` parameter should be a valid URL to the ChainStream API. This is expected to be
     /// wss://chainstream.api.syndica.io
-    pub async fn new(url: &str, token: &str) -> Result<Self> {
+    pub async fn new(token: impl AsRef<str>) -> Result<Self> {
         let mut map = HeaderMap::new();
-        map.insert("X-Syndica-Api-Token", token.parse().unwrap());
+        map.insert("X-Syndica-Api-Token", token.as_ref().parse().unwrap());
 
         Ok(Self {
-            inner: Arc::new(WsClientBuilder::new().set_headers(map).build(url).await?),
-            token: token.to_string(),
+            inner: Arc::new(
+                WsClientBuilder::new()
+                    .set_headers(map)
+                    .build(CHAINSTREAM_API_URL)
+                    .await?,
+            ),
+            token: token.as_ref().to_string(),
         })
     }
 
-    pub async fn subscribe<T>(&self, method: Method) -> Result<ChainStreamSubscription<T>>
+    pub async fn subscribe<M>(&self, method: M) -> Result<ChainStreamSubscription<M::Output>>
     where
-        T: DeserializeOwned,
+        M: SubscriptionMethod,
     {
         let inner = self.inner.clone();
 

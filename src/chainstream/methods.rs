@@ -1,8 +1,10 @@
 //! Provides the necessary types required to build Chainstream RPC requests.
 use jsonrpsee::core::params::{self, ObjectParams};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json;
 use thiserror;
+
+use super::types::transaction::TransactionWrite;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Network {
@@ -30,60 +32,43 @@ pub enum RpcError {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Method {
     #[serde(rename = "transactionsSubscribe")]
-    TransactionSubscribe(TransactionMethodBuilder),
+    TransactionSubscribe(TransactionMethod),
     #[serde(rename = "blocksSubscribe")]
-    BlockSubscribe(BlockMethodBuilder),
+    BlockSubscribe(BlockMethod),
     #[serde(rename = "slotUpdatesSubscribe")]
-    SlotSubscribe(SlotMethodBuilder),
+    SlotSubscribe(SlotMethod),
+}
+
+pub trait SubscriptionMethod {
+    type Output: DeserializeOwned;
+    fn subscribe_method(&self) -> &'static str;
+    fn unsubscribe_method(&self) -> &'static str;
+    fn params(&self) -> Result<ObjectParams, RpcError>;
 }
 
 impl Method {
-    pub fn new_transaction_subscription() -> TransactionMethodBuilder {
-        TransactionMethodBuilder::default()
+    pub fn new_transaction_subscription() -> TransactionMethod {
+        TransactionMethod::default()
     }
 
-    pub fn new_block_subscription() -> BlockMethodBuilder {
-        BlockMethodBuilder::default()
+    pub fn new_block_subscription() -> BlockMethod {
+        BlockMethod::default()
     }
 
-    pub fn new_slot_subscription() -> SlotMethodBuilder {
-        SlotMethodBuilder::default()
-    }
-
-    pub fn params(&self) -> Result<params::ObjectParams, RpcError> {
-        match self {
-            Method::TransactionSubscribe(builder) => builder.build_params(),
-            Method::BlockSubscribe(builder) => builder.build_params(),
-            Method::SlotSubscribe(builder) => builder.build_params(),
-        }
-    }
-
-    pub fn subscribe_method(&self) -> &'static str {
-        match self {
-            Method::TransactionSubscribe(_) => "transactionsSubscribe",
-            Method::BlockSubscribe(_) => "blocksSubscribe",
-            Method::SlotSubscribe(_) => "slotUpdatesSubscribe",
-        }
-    }
-
-    pub fn unsubscribe_method(&self) -> &'static str {
-        match self {
-            Method::TransactionSubscribe(_) => "transactionsUnsubscribe",
-            Method::BlockSubscribe(_) => "blocksUnsubscribe",
-            Method::SlotSubscribe(_) => "slotUpdatesUnsubscribe",
-        }
+    pub fn new_slot_subscription() -> SlotMethod {
+        SlotMethod::default()
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct TransactionMethodBuilder {
+pub struct TransactionMethod {
     pub network: Network,
     pub verified: bool,
     pub filter: TransactionFilter,
 }
 
-impl TransactionMethodBuilder {
+impl TransactionMethod {
     pub fn filter(self, filter: TransactionFilter) -> Self {
         Self { filter, ..self }
     }
@@ -104,10 +89,10 @@ impl TransactionMethodBuilder {
         Self { filter, ..self }
     }
 
-    pub fn all_account_keys(self, account_keys: Vec<String>) -> Self {
+    pub fn all_account_keys<T: ToString>(self, account_keys: &[T]) -> Self {
         let filter = TransactionFilter {
             account_keys: Some(PubKeySelector {
-                all: Some(account_keys),
+                all: Some(account_keys.iter().map(|k| k.to_string()).collect()),
                 ..self.filter.account_keys.unwrap_or_default()
             }),
             ..self.filter
@@ -115,10 +100,10 @@ impl TransactionMethodBuilder {
         Self { filter, ..self }
     }
 
-    pub fn one_of_account_keys(self, account_keys: Vec<String>) -> Self {
+    pub fn one_of_account_keys<T: ToString>(self, account_keys: &[T]) -> Self {
         let filter = TransactionFilter {
             account_keys: Some(PubKeySelector {
-                one_of: Some(account_keys),
+                one_of: Some(account_keys.iter().map(|k| k.to_string()).collect()),
                 ..self.filter.account_keys.unwrap_or_default()
             }),
             ..self.filter
@@ -126,10 +111,10 @@ impl TransactionMethodBuilder {
         Self { filter, ..self }
     }
 
-    pub fn exclude_account_keys(self, account_keys: Vec<String>) -> Self {
+    pub fn exclude_account_keys<T: ToString>(self, account_keys: &[T]) -> Self {
         let filter = TransactionFilter {
             account_keys: Some(PubKeySelector {
-                exclude: Some(account_keys),
+                exclude: Some(account_keys.iter().map(|k| k.to_string()).collect()),
                 ..self.filter.account_keys.unwrap_or_default()
             }),
             ..self.filter
@@ -157,7 +142,7 @@ impl TransactionMethodBuilder {
     }
 }
 
-impl Default for TransactionMethodBuilder {
+impl Default for TransactionMethod {
     fn default() -> Self {
         Self {
             network: Network::SolanaMainnet,
@@ -167,6 +152,22 @@ impl Default for TransactionMethodBuilder {
                 account_keys: None,
             },
         }
+    }
+}
+
+impl SubscriptionMethod for TransactionMethod {
+    type Output = TransactionWrite;
+
+    fn subscribe_method(&self) -> &'static str {
+        "transactionsSubscribe"
+    }
+
+    fn unsubscribe_method(&self) -> &'static str {
+        "transactionsUnsubscribe"
+    }
+
+    fn params(&self) -> Result<ObjectParams, RpcError> {
+        self.build_params()
     }
 }
 
@@ -192,12 +193,12 @@ struct PubKeySelector {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct BlockMethodBuilder {
+pub struct BlockMethod {
     pub network: Network,
     pub verified: bool,
 }
 
-impl BlockMethodBuilder {
+impl BlockMethod {
     pub fn network(self, network: Network) -> Self {
         Self { network, ..self }
     }
@@ -223,7 +224,7 @@ impl BlockMethodBuilder {
     }
 }
 
-impl Default for BlockMethodBuilder {
+impl Default for BlockMethod {
     fn default() -> Self {
         Self {
             network: Network::SolanaMainnet,
@@ -232,14 +233,30 @@ impl Default for BlockMethodBuilder {
     }
 }
 
+impl SubscriptionMethod for BlockMethod {
+    type Output = serde_json::Value;
+
+    fn subscribe_method(&self) -> &'static str {
+        "blocksSubscribe"
+    }
+
+    fn unsubscribe_method(&self) -> &'static str {
+        "blocksUnsubscribe"
+    }
+
+    fn params(&self) -> Result<ObjectParams, RpcError> {
+        self.build_params()
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct SlotMethodBuilder {
+pub struct SlotMethod {
     pub network: Network,
     pub verified: bool,
 }
 
-impl SlotMethodBuilder {
+impl SlotMethod {
     pub fn network(self, network: Network) -> Self {
         Self { network, ..self }
     }
@@ -265,11 +282,27 @@ impl SlotMethodBuilder {
     }
 }
 
-impl Default for SlotMethodBuilder {
+impl Default for SlotMethod {
     fn default() -> Self {
         Self {
             network: Network::SolanaMainnet,
             verified: false,
         }
+    }
+}
+
+impl SubscriptionMethod for SlotMethod {
+    type Output = serde_json::Value;
+
+    fn subscribe_method(&self) -> &'static str {
+        "slotUpdatesSubscribe"
+    }
+
+    fn unsubscribe_method(&self) -> &'static str {
+        "slotUpdatesUnsubscribe"
+    }
+
+    fn params(&self) -> Result<ObjectParams, RpcError> {
+        self.build_params()
     }
 }
