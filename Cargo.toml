@@ -4,9 +4,15 @@ authors = ["syndica.io"]
 version = "0.1.0"
 edition = "2021"
 
+default-run = "main"
+
 [[bin]]
-name = "swap-stream"
-path = "src/bin/swap_stream.rs"
+name = "complete-example"
+path = "src/bin/complete_example.rs"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
 
 [dependencies]
 tokio = { version = "1.x", features = ["full"] }

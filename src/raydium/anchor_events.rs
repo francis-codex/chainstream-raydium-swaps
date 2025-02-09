@@ -8,13 +8,13 @@
 //!
 //! These structures were lifted from the Raydium program source code,
 //! which can be found [here](https://github.com/raydium-io/raydium-clmm/blob/master/programs/amm/src/states)
-
 use anchor_lang::prelude::Pubkey;
 use anchor_lang::prelude::*;
 
 // Number of rewards Token
 const REWARD_NUM: usize = 3;
 
+#[allow(unused)]
 #[derive(Debug)]
 pub enum RaydiumCLMMEvent {
     ConfigChange(ConfigChangeEvent),

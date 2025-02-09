@@ -37,14 +37,17 @@ pub mod transaction {
     }
 
     impl TransactionWrite {
+        #[allow(unused)]
         pub fn signature(&self) -> Signature {
             Signature::from_str(self.context.signature.as_str()).unwrap()
         }
 
+        #[allow(unused)]
         pub fn logs(&self) -> &[String] {
             self.value.meta.as_ref().unwrap().log_messages.as_slice()
         }
 
+        #[allow(unused)]
         pub fn meta(&self) -> Meta {
             self.value.meta.as_ref().unwrap().clone()
         }

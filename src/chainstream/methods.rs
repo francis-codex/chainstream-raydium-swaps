@@ -1,3 +1,4 @@
+#![allow(unused)]
 //! Provides the necessary types required to build Chainstream RPC requests.
 use jsonrpsee::core::params::{self, ObjectParams};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -21,10 +22,18 @@ impl Network {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CommitmentLevel {
+    #[serde(rename = "processed")]
+    Processed,
+    #[serde(rename = "confirmed")]
+    Confirmed,
+    #[serde(rename = "finalized")]
+    Finalized,
+}
+
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum RpcError {
-    #[error("Unsupported method")]
-    UnsupportedMethod,
     #[error("Params error: {0}")]
     ParamsError(String),
 }
@@ -51,10 +60,12 @@ impl Method {
         TransactionMethod::default()
     }
 
+    #[allow(unused)]
     pub fn new_block_subscription() -> BlockMethod {
         BlockMethod::default()
     }
 
+    #[allow(unused)]
     pub fn new_slot_subscription() -> SlotMethod {
         SlotMethod::default()
     }
@@ -69,18 +80,22 @@ pub struct TransactionMethod {
 }
 
 impl TransactionMethod {
+    #[allow(unused)]
     pub fn filter(self, filter: TransactionFilter) -> Self {
         Self { filter, ..self }
     }
 
+    #[allow(unused)]
     pub fn network(self, network: Network) -> Self {
         Self { network, ..self }
     }
 
+    #[allow(unused)]
     pub fn verified(self, verified: bool) -> Self {
         Self { verified, ..self }
     }
 
+    #[allow(unused)]
     pub fn exclude_votes(self, exclude_votes: bool) -> Self {
         let filter = TransactionFilter {
             exclude_votes: Some(exclude_votes),
@@ -89,6 +104,7 @@ impl TransactionMethod {
         Self { filter, ..self }
     }
 
+    #[allow(unused)]
     pub fn all_account_keys<T: ToString>(self, account_keys: &[T]) -> Self {
         let filter = TransactionFilter {
             account_keys: Some(PubKeySelector {
@@ -100,6 +116,7 @@ impl TransactionMethod {
         Self { filter, ..self }
     }
 
+    #[allow(unused)]
     pub fn one_of_account_keys<T: ToString>(self, account_keys: &[T]) -> Self {
         let filter = TransactionFilter {
             account_keys: Some(PubKeySelector {
@@ -111,12 +128,22 @@ impl TransactionMethod {
         Self { filter, ..self }
     }
 
+    #[allow(unused)]
     pub fn exclude_account_keys<T: ToString>(self, account_keys: &[T]) -> Self {
         let filter = TransactionFilter {
             account_keys: Some(PubKeySelector {
                 exclude: Some(account_keys.iter().map(|k| k.to_string()).collect()),
                 ..self.filter.account_keys.unwrap_or_default()
             }),
+            ..self.filter
+        };
+        Self { filter, ..self }
+    }
+
+    #[allow(unused)]
+    pub fn commitment_level(self, commitment: CommitmentLevel) -> Self {
+        let filter = TransactionFilter {
+            commitment: Some(commitment),
             ..self.filter
         };
         Self { filter, ..self }
@@ -137,6 +164,7 @@ impl TransactionMethod {
         Ok(params)
     }
 
+    #[allow(unused)]
     pub fn build(self) -> Method {
         Method::TransactionSubscribe(self)
     }
@@ -150,6 +178,7 @@ impl Default for TransactionMethod {
             filter: TransactionFilter {
                 exclude_votes: None,
                 account_keys: None,
+                commitment: None,
             },
         }
     }
@@ -178,6 +207,8 @@ pub struct TransactionFilter {
     exclude_votes: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     account_keys: Option<PubKeySelector>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    commitment: Option<CommitmentLevel>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -199,10 +230,12 @@ pub struct BlockMethod {
 }
 
 impl BlockMethod {
+    #[allow(unused)]
     pub fn network(self, network: Network) -> Self {
         Self { network, ..self }
     }
 
+    #[allow(unused)]
     pub fn verified(self, verified: bool) -> Self {
         Self { verified, ..self }
     }
@@ -219,6 +252,7 @@ impl BlockMethod {
         Ok(params)
     }
 
+    #[allow(unused)]
     pub fn build(self) -> Method {
         Method::BlockSubscribe(self)
     }
@@ -257,10 +291,12 @@ pub struct SlotMethod {
 }
 
 impl SlotMethod {
+    #[allow(unused)]
     pub fn network(self, network: Network) -> Self {
         Self { network, ..self }
     }
 
+    #[allow(unused)]
     pub fn verified(self, verified: bool) -> Self {
         Self { verified, ..self }
     }
@@ -277,6 +313,7 @@ impl SlotMethod {
         Ok(params)
     }
 
+    #[allow(unused)]
     pub fn build(self) -> Method {
         Method::SlotSubscribe(self)
     }

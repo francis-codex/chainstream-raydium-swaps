@@ -2,8 +2,8 @@
 //!
 //! This code was mostly adapted from raydium-io's raydium-clmm repository:
 //! https://github.com/raydium-io/raydium-clmm/blob/master/client/src/instructions/events_instructions_parse.rs
+#![allow(unused)]
 
-// use anchor_client::ClientError;
 use anchor_lang::{prelude::*, Discriminator};
 use anyhow::anyhow;
 use base64::Engine;
