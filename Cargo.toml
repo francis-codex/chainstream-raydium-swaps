@@ -1,0 +1,39 @@
+[package]
+name = "chainstream-raydium-trade-pair"
+authors = ["syndica.io"]
+version = "0.1.0"
+edition = "2021"
+
+default-run = "main"
+
+[[bin]]
+name = "complete-example"
+path = "src/bin/complete_example.rs"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+anyhow = "1.0"
+http = "1.0"
+jsonrpsee = { version = "0.24", features = ["ws-client", "http-client"] }
+serde_json = "1.0"
+thiserror = "2.0"
+solana-sdk = "2.1"
+regex = "1"
+anchor-lang = "0.30"
+base64 = "0.22"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Due to dependency issue within solana-sdk on an older version of curve25519-dalek,
+# rely on pathed version of it instead that internally uses a newer version of zeroize.
+# More info here:  https://github.com/solana-labs/solana/issues/26688
+[patch.crates-io]
+# aes-gcm-siv 0.10.3 and curve25519-dalek 3.x pin zeroize to <1.4
+# which conflicts with other dependencies requiring zeroize ^1.5.
+curve25519-dalek = { git = "https://github.com/Syndica/curve25519-dalek.git", branch = "fix_zeroize_dep" }
+
